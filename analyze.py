@@ -1,0 +1,74 @@
+"""Validate, analyze, and visualize synthetic sourcing data."""
+from pathlib import Path
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+ROOT = Path(__file__).resolve().parent
+OUT = ROOT / 'outputs'
+OUT.mkdir(exist_ok=True)
+suppliers = pd.read_csv(ROOT / 'suppliers.csv')
+tx = pd.read_csv(ROOT / 'transactions.csv', parse_dates=['invoice_date'])
+required = {'transaction_id', 'invoice_id', 'supplier_id', 'invoice_date', 'amount_usd'}
+if not required.issubset(tx.columns):
+    raise ValueError(f'Missing columns: {required - set(tx.columns)}')
+if tx['transaction_id'].duplicated().any():
+    raise ValueError('Duplicate transaction IDs')
+if tx['amount_usd'].isna().any() or (tx['amount_usd'] <= 0).any():
+    raise ValueError('Missing or nonpositive transaction amounts')
+if not tx['supplier_id'].isin(suppliers['supplier_id']).all():
+    raise ValueError('Transactions contain unknown supplier IDs')
+df = tx.merge(suppliers, on='supplier_id', validate='many_to_one')
+spend = df.groupby(['supplier_id', 'supplier_name'], as_index=False)['amount_usd'].sum().sort_values('amount_usd', ascending=False)
+spend['share_pct'] = spend['amount_usd'] / spend['amount_usd'].sum() * 100
+spend['cumulative_share_pct'] = spend['share_pct'].cumsum()
+spend.to_csv(OUT / 'supplier_spend.csv', index=False)
+category = df.groupby('category')['amount_usd'].sum().sort_values(ascending=False)
+category.rename('spend_usd').to_csv(OUT / 'category_spend.csv')
+# Same supplier + invoice ID is a review flag, not proof of duplicate payment.
+duplicate = df[df.duplicated(['supplier_id', 'invoice_id'], keep=False)].sort_values(['supplier_id', 'invoice_id'])
+duplicate.to_csv(OUT / 'duplicate_invoice_flags.csv', index=False)
+# Supplier-level exposure >10% of total spend; threshold is illustrative.
+concentration = spend[spend['share_pct'] > 10]
+concentration.to_csv(OUT / 'concentration_flags.csv', index=False)
+# Uncontracted spend is an opportunity indicator, not guaranteed savings.
+uncontracted = df.loc[~df['contracted'], 'amount_usd'].sum()
+scenario_savings = uncontracted * .03
+summary = pd.DataFrame([{
+    'total_spend_usd': round(df['amount_usd'].sum(), 2),
+    'active_suppliers': df['supplier_id'].nunique(),
+    'top_10_supplier_spend_pct': round(spend.head(10)['share_pct'].sum(), 2),
+    'flagged_invoice_rows': len(duplicate),
+    'flagged_invoice_pairs': duplicate[['supplier_id', 'invoice_id']].drop_duplicates().shape[0],
+    'uncontracted_spend_usd': round(uncontracted, 2),
+    'illustrative_savings_at_3pct_usd': round(scenario_savings, 2),
+}])
+summary.to_csv(OUT / 'executive_summary.csv', index=False)
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+fig.suptitle('Strategic Sourcing | Executive Spend Intelligence', fontsize=18, fontweight='bold')
+fig.text(.5, .945, 'SYNTHETIC DEMONSTRATION DATA · 2025 · USD', ha='center', fontsize=10)
+category.sort_values().plot.barh(ax=axes[0,0], color='#197f8c')
+axes[0,0].set_title('Spend by Category')
+axes[0,0].set_xlabel('USD')
+axes[0,0].set_ylabel('')
+axes[0,1].plot(range(1, len(spend)+1), spend['cumulative_share_pct'], color='#b35b31', linewidth=2)
+axes[0,1].axhline(80, color='gray', linestyle='--', linewidth=1)
+axes[0,1].set_title('Supplier Spend Concentration (Pareto)')
+axes[0,1].set_xlabel('Suppliers ranked by spend')
+axes[0,1].set_ylabel('Cumulative spend (%)')
+axes[0,1].set_ylim(0, 105)
+monthly = df.groupby(df['invoice_date'].dt.to_period('M'))['amount_usd'].sum()
+axes[1,0].plot(monthly.index.astype(str), monthly.values, marker='o', color='#197f8c')
+axes[1,0].set_title('Monthly Procurement Spend')
+axes[1,0].tick_params(axis='x', rotation=45)
+axes[1,0].set_ylabel('USD')
+contracted = df.groupby('contracted')['amount_usd'].sum().reindex([True, False], fill_value=0)
+axes[1,1].pie(contracted, labels=['Contracted', 'Uncontracted'], autopct='%1.1f%%', colors=['#197f8c', '#e0a34a'])
+axes[1,1].set_title('Contract Coverage by Spend')
+fig.tight_layout(rect=[0, 0, 1, .92])
+fig.savefig(OUT / 'sourcing_dashboard.png', dpi=180, bbox_inches='tight')
+plt.close(fig)
+print(summary.to_string(index=False))
+print('Reports and dashboard saved in outputs/')
