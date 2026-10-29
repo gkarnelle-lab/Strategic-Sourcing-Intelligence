@@ -113,3 +113,168 @@ moderate_savings = savings_df.loc[
     savings_df['scenario'] == 'Moderate',
     'estimated_savings_usd'
 ].iloc[0]
+NAVY = '#17324D'
+TEAL = '#197F8C'
+GOLD = '#D99A36'
+GRAY = '#66788A'
+
+fig = plt.figure(figsize=(16, 11), facecolor='#F5F7FA')
+
+fig.text(
+    .06, .955,
+    'STRATEGIC SOURCING | EXECUTIVE INTELLIGENCE',
+    fontsize=20, fontweight='bold', color=NAVY
+)
+fig.text(
+    .06, .923,
+    '2025 Procurement Cost Optimization | Synthetic Data',
+    fontsize=11, color=GRAY
+)
+
+# Executive KPI cards
+kpis = [
+    ('TOTAL PROCUREMENT SPEND', total_spend, 'money'),
+    ('OFF-CONTRACT SPEND', uncontracted, 'money'),
+    ('OFF-CONTRACT SHARE', off_contract_pct, 'percent'),
+    ('MODERATE SAVINGS CASE', moderate_savings, 'money')
+]
+
+for i, (label, value, kind) in enumerate(kpis):
+    x = .06 + i * .235
+    ax = fig.add_axes([x, .79, .215, .105])
+    ax.set_facecolor('white')
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    display = (
+        f'${value / 1e6:,.2f}M'
+        if kind == 'money' and value >= 1e6
+        else f'${value / 1000:,.1f}K'
+        if kind == 'money'
+        else f'{value:.1f}%'
+    )
+
+    ax.text(.05, .70, label, transform=ax.transAxes,
+            fontsize=9, color=GRAY, fontweight='bold')
+    ax.text(.05, .18, display, transform=ax.transAxes,
+            fontsize=23, color=TEAL, fontweight='bold')
+
+# Savings scenarios
+ax1 = fig.add_axes([.08, .43, .39, .29])
+ax1.set_facecolor('white')
+colors = ['#A6C5CA', TEAL, GOLD]
+
+bars = ax1.bar(
+    savings_df['scenario'],
+    savings_df['estimated_savings_usd'],
+    color=colors,
+    width=.58
+)
+
+ax1.set_title(
+    '01 | Annual Savings Scenarios',
+    loc='left', fontweight='bold', color=NAVY, pad=15
+)
+ax1.yaxis.set_major_formatter(
+    FuncFormatter(lambda x, pos: f'${x / 1000:,.0f}K')
+)
+ax1.spines[['top', 'right']].set_visible(False)
+
+for bar in bars:
+    height = bar.get_height()
+    ax1.text(
+        bar.get_x() + bar.get_width() / 2,
+        height + 5000,
+        f'${height / 1000:,.1f}K',
+        ha='center', fontsize=10, fontweight='bold'
+    )
+
+ax1.set_ylim(
+    0, savings_df['estimated_savings_usd'].max() * 1.22
+)
+
+# Ranked sourcing opportunities
+ax2 = fig.add_axes([.57, .43, .37, .29])
+ax2.set_facecolor('white')
+
+top = category_opportunities.head(5).iloc[::-1]
+
+ax2.barh(
+    top['category'],
+    top['estimated_savings_usd'],
+    color=TEAL
+)
+
+ax2.set_title(
+    '02 | Top Sourcing Opportunities',
+    loc='left', fontweight='bold', color=NAVY, pad=15
+)
+ax2.xaxis.set_major_formatter(
+    FuncFormatter(lambda x, pos: f'${x / 1000:,.0f}K')
+)
+ax2.spines[['top', 'right']].set_visible(False)
+
+for i, value in enumerate(top['estimated_savings_usd']):
+    ax2.text(
+        value + 500, i,
+        f'${value / 1000:,.1f}K',
+        va='center', fontsize=9
+    )
+
+ax2.set_xlim(
+    0, top['estimated_savings_usd'].max() * 1.28
+)
+
+# Executive recommendations
+ax3 = fig.add_axes([.06, .10, .88, .24])
+ax3.set_facecolor('white')
+ax3.set_xticks([])
+ax3.set_yticks([])
+
+for spine in ax3.spines.values():
+    spine.set_visible(False)
+
+ax3.text(
+    .025, .83, '03 | EXECUTIVE RECOMMENDATIONS',
+    fontsize=13, fontweight='bold', color=NAVY,
+    transform=ax3.transAxes
+)
+
+recommendations = [
+    'PRIORITY 1  |  Review off-contract Professional Services spend.',
+    'PRIORITY 2  |  Evaluate MRO and Packaging for negotiated agreements.',
+    'PRIORITY 3  |  Establish monthly contract coverage and savings KPIs.'
+]
+
+for i, recommendation in enumerate(recommendations):
+    ax3.text(
+        .035, .60 - i * .20,
+        recommendation, fontsize=11, color=NAVY,
+        transform=ax3.transAxes
+    )
+
+fig.text(
+    .06, .055,
+    'Savings assumptions: 25% / 50% / 75% addressable spend; '
+    '2% / 5% / 8% savings rates.',
+    fontsize=9, color=GRAY
+)
+fig.text(
+    .06, .035,
+    'Illustrative opportunities only. No realized savings or '
+    'validated supplier negotiations are implied.',
+    fontsize=9, color=GRAY
+)
+
+fig.savefig(
+    OUT / 'sourcing_dashboard.png',
+    dpi=180, bbox_inches='tight',
+    facecolor=fig.get_facecolor()
+)
+plt.close(fig)
+
+print(summary.to_string(index=False))
+print('Executive dashboard and reports saved in outputs/')
