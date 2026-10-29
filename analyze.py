@@ -107,3 +107,9 @@ print(category_opportunities.head(5).to_string(index=False))
 # Synthetic demonstration data. Savings are illustrative.
 
 from matplotlib.ticker import FuncFormatter
+total_spend = df['amount_usd'].sum()
+off_contract_pct = uncontracted / total_spend * 100
+moderate_savings = savings_df.loc[
+    savings_df['scenario'] == 'Moderate',
+    'estimated_savings_usd'
+].iloc[0]
