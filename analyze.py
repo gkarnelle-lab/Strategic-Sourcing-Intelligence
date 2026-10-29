@@ -103,7 +103,6 @@ print(savings_df.to_string(index=False))
 print('\nTOP SOURCING OPPORTUNITIES')
 print(category_opportunities.head(5).to_string(index=False))
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 9))
 # EXECUTIVE PROCUREMENT DASHBOARD
 # Synthetic demonstration data. Savings are illustrative.
 
