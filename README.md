@@ -1,6 +1,6 @@
 # Strategic Sourcing & Supplier Spend Intelligence
 
-![Strategic Sourcing Dashboard](outputs/sourcing_dashboard.png)
+![Strategic Sourcing Dashboard](./sourcing_dashboard.png)
 
 **Python-based procurement analytics and automated exception reporting using synthetic demonstration data.**
 
