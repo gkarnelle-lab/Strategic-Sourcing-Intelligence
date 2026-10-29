@@ -46,6 +46,63 @@ summary = pd.DataFrame([{
 }])
 summary.to_csv(OUT / 'executive_summary.csv', index=False)
 
+# EXECUTIVE SAVINGS OPPORTUNITY MODEL
+# Synthetic scenarios, not realized or guaranteed savings.
+
+total_spend = df['amount_usd'].sum()
+off_contract = df.loc[~df['contracted']].copy()
+
+scenarios = {
+    'Conservative': {'addressable_pct': 0.25, 'savings_rate': 0.02},
+    'Moderate': {'addressable_pct': 0.50, 'savings_rate': 0.05},
+    'Ambitious': {'addressable_pct': 0.75, 'savings_rate': 0.08},
+}
+
+scenario_rows = []
+
+for name, assumptions in scenarios.items():
+    addressable = uncontracted * assumptions['addressable_pct']
+    savings = addressable * assumptions['savings_rate']
+
+    scenario_rows.append({
+        'scenario': name,
+        'addressable_spend_usd': round(addressable, 2),
+        'estimated_savings_usd': round(savings, 2),
+        'savings_pct_total_spend': round(savings / total_spend * 100, 2),
+    })
+
+savings_df = pd.DataFrame(scenario_rows)
+savings_df.to_csv(OUT / 'savings_scenarios.csv', index=False)
+
+# Rank categories by potential off-contract savings.
+category_opportunities = (
+    off_contract.groupby('category', as_index=False)['amount_usd']
+    .sum()
+    .rename(columns={'amount_usd': 'off_contract_spend_usd'})
+)
+
+category_opportunities['estimated_savings_usd'] = (
+    category_opportunities['off_contract_spend_usd'] * 0.50 * 0.05
+)
+
+category_opportunities = category_opportunities.sort_values(
+    'estimated_savings_usd', ascending=False
+)
+
+category_opportunities['priority_rank'] = range(
+    1, len(category_opportunities) + 1
+)
+
+category_opportunities.to_csv(
+    OUT / 'sourcing_opportunities.csv', index=False
+)
+
+print('\nEXECUTIVE SAVINGS SCENARIOS')
+print(savings_df.to_string(index=False))
+
+print('\nTOP SOURCING OPPORTUNITIES')
+print(category_opportunities.head(5).to_string(index=False))
+
 fig, axes = plt.subplots(2, 2, figsize=(14, 9))
 fig.suptitle('Strategic Sourcing | Executive Spend Intelligence', fontsize=18, fontweight='bold')
 fig.text(.5, .945, 'SYNTHETIC DEMONSTRATION DATA · 2025 · USD', ha='center', fontsize=10)
