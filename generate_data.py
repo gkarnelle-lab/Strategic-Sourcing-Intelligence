@@ -16,6 +16,8 @@ suppliers = pd.DataFrame({
     'category': rng.choice(categories, 250),
     'contracted': rng.choice([True, False], 250, p=[.75, .25]),
 })
+# Fictional supplier identity for portfolio demonstration
+suppliers.loc[suppliers['supplier_id'] == 'SUP-016', 'supplier_name'] = 'KG Soundworks'
 suppliers.to_csv(ROOT / 'suppliers.csv', index=False)
 weights = rng.pareto(1.6, 250) + .2
 weights /= weights.sum()
