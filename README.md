@@ -1,5 +1,4 @@
 # Strategic Sourcing Intelligence
-### Executive Procurement Analytics | Cost Optimization | Python Automation
 
 **Transforming procurement transaction data into actionable sourcing strategies and quantified cost-saving opportunities.**
 
