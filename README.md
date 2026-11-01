@@ -1,7 +1,5 @@
 # Strategic Sourcing Intelligence
 
-**Transforming procurement transaction data into actionable sourcing strategies and quantified cost-saving opportunities.**
-
 This project demonstrates an automated procurement intelligence workflow designed to help sourcing leaders identify purchasing inefficiencies, evaluate contract coverage, prioritize sourcing opportunities, and support data-driven financial decisions.
 
 The analysis uses **synthetic 2025 procurement data** and Python-based automation to simulate an executive-level cost optimization initiative.
